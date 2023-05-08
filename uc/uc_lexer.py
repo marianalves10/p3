@@ -4,6 +4,10 @@ import sys
 import ply.lex as lex
 
 
+import sys
+import ply.lex as lex
+
+
 class UCLexer:
     """A lexer for the uC language. After building it, set the
     input text with input(), and call token() to get new
@@ -54,7 +58,7 @@ class UCLexer:
         self.lexer.skip(1)
 
     def _make_tok_location(self, token):
-        return (token.lineno, self.find_tok_column(token))
+        return token.lineno, self.find_tok_column(token)
 
     # Reserved keywords
     keywords = (
@@ -79,31 +83,72 @@ class UCLexer:
     #
     # All the tokens recognized by the lexer
     #
+
     tokens = keywords + (
         # Identifiers
         "ID",
         # constants
         "INT_CONST",
+        "CHAR_CONST",
+        "STRING_LITERAL",
+        # Operators
+        "PLUS",
+        "MINUS",
+        "TIMES",
+        "DIVIDE",
+        "MOD",
+        "OR",
+        "AND",
+        "NOT",
+        "LT",
+        "LE",
+        "GT",
+        "GE",
+        "EQ",
+        "NE",
+        # Assignment
+        "EQUALS",
+        # Delimeters
+        "LPAREN",
+        "RPAREN",  # ( )
+        "LBRACKET",
+        "RBRACKET",  # [ ]
+        "LBRACE",
+        "RBRACE",  # { }
+        "COMMA",
+        "SEMI",  # , ;
     )
 
     #
     # Rules
     #
     t_ignore = " \t"
+    t_LPAREN  = r'\('
+    t_RPAREN  = r'\)'
+    t_LBRACKET  = r'\['
+    t_RBRACKET  = r'\]'
+    t_LBRACE  = r'\{'
+    t_RBRACE  = r'\}'
+    t_PLUS    = r'\+'
+    t_MINUS   = r'-'
+    t_TIMES   = r'\*'
+    t_DIVIDE  = r'/'
+    t_EQUALS  = r'\='
+    t_EQ  = r'\=='
+    t_SEMI  = r'\;'
+    t_COMMA  = r'\,'
+    t_MOD = r"\%"
+    t_AND = r"\&\&"
+    t_OR = r"\|\|"
+    t_NOT = r"\!"
+    t_LT  = r'\<'
+    t_GT  = r'\>'
+    t_LE  = r'\<='
+    t_GE  = r'\>='
+    t_NE  = r'\!='
+    t_CHAR_CONST = r"\'.\'"
 
-    # Newlines
-    def t_NEWLINE(self, t):
-        # include a regex here for newline
-        t.lexer.lineno += t.value.count("\n")
 
-    def t_ID(self, t):
-        # include a regex here for ID
-        t.type = self.keyword_map.get(t.value, "ID")
-        return t
-
-    def t_comment(self, t):
-        # include a regex here for comment
-        t.lexer.lineno += t.value.count("\n")
 
     def t_error(self, t):
         msg = "Illegal character %s" % repr(t.value[0])
@@ -120,6 +165,38 @@ class UCLexer:
             print(tok)
             output += str(tok) + "\n"
         return output
+
+    # Newlines
+    def t_NEWLINE(self, t):
+        # include a regex here for newline
+        r'\n+'
+        t.lexer.lineno += t.value.count("\n")
+
+    def t_ID(self, t):
+        # include a regex here for ID
+        r'[a-zA-Z_][0-9a-zA-Z_]*'
+        t.type = self.keyword_map.get(t.value, "ID")
+        return t
+
+    def t_STRING_LITERAL(self, t):
+            r"\".+?\""
+            t.value = t.value[1:-1]
+            return t
+    def t_comment(self, t):
+        # include a regex here for comment
+        r'(/\*(.|\n)*?\*/)|(//.*)'
+        t.lexer.lineno += t.value.count("\n")
+        pass
+
+    def t_UCCOMMENT(self, t):
+        r"/\*[^*]*[^(\*/)]"
+        msg = "Unterminated comment"
+        self._error(msg, t)
+
+    def t_INT_CONST(self, t):
+        r'\d+'
+        return t
+
 
 
 if __name__ == "__main__":

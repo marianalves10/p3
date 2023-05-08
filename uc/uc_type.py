@@ -27,7 +27,20 @@ IntType = uCType(
     assign_ops={"="},
 )
 # TODO: add other basic types
-# CharType = uCType("char", ...)
+CharType = uCType("char", 
+                  unary_ops={"-", "+"}, #TODO: check if this is correct
+                  binary_ops={"+"},
+                  rel_ops={"==", "!=", "&&", "||"},
+                  assign_ops={"="},
+
+)
+BoolType = uCType("bool",
+                  unary_ops={"!"},
+                  binary_ops={},
+                  rel_ops={"==", "!=", "&&", "||"},
+                  assign_ops={"="},
+)
+
 
 
 # TODO: add array and function types
