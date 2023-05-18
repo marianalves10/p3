@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 from uc.uc_ast import ID
 from uc.uc_parser import UCParser
-from uc.uc_type import CharType, IntType
+from uc.uc_type import CharType, IntType, BoolType
 
 
 class SymbolTable:
@@ -36,7 +36,14 @@ class SymbolTable:
         - :param value: the value to assign to the given `name`
         """
         self.__data[name] = value
+    def exit_scope(self, name):
+        self.__data.pop(name)
 
+    def is_in_scope(self, value: Any):
+        if value in self.__data:
+            return True
+        else:
+            return False
     def lookup(self, name: str) -> Union[Any, None]:
         """ Searches `name` on the SymbolTable and returns the value
         assigned to it.
@@ -48,8 +55,7 @@ class SymbolTable:
         - :return: the value assigned to `name` on the SymbolTable. If `name` is not found, `None` is returned.
         """
         return self.__data.get(name)
-
-
+    
 class NodeVisitor:
     """A base NodeVisitor class for visiting uc_ast nodes.
     Subclass it and define your own visit_XXX methods, where
@@ -93,6 +99,7 @@ class Visitor(NodeVisitor):
         self.typemap = {
             "int": IntType,
             "char": CharType,
+            "bool" : BoolType
             # TODO
         }
         # TODO: Complete...
@@ -139,15 +146,30 @@ class Visitor(NodeVisitor):
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expression
-        self.visit(node.left)
-        ltype = node.left.uc_type
-        self.visit(node.right)
-        rtype = node.right.uc_type
+        self.visit(node.lvalue)
+        ltype = node.lvalue.uc_type
+        self.visit(node.rvalue)
+        rtype = node.rvalue.uc_type
+
+        self._assert_semantic(rtype == ltype, 4,  ltype, rtype)
+        self._assert_semantic(node.op in ltype.binary_ops or node.op in ltype.rel_ops, 6, node.op, ltype)
         # TODO:
         # - Make sure left and right operands have the same type
         # - Make sure the operation is supported
         # - Assign the result type
+        if node.op in ltype.rel_ops:
+            node.uc_type = self.typemap["bool"]
+        else:
+            node.uc_type = self.typemap[ltype.typename]
+            
+    def visit_UnaryOp(self, node):
+        self._assert_semantic(node.op in node.unary_ops, 25, node.op)
+        self.visit(node.expr)
+        expr_type = node.expr.uc_type
+        node.uc_type = expr_type
 
+    # def visit_FuncDecl(self,node):
+    #     self.visit(node.)
     def visit_Assignment(self, node):
         # visit right side
         self.visit(node.rvalue)
@@ -167,6 +189,19 @@ class Visitor(NodeVisitor):
             node.op in ltype.assign_ops, 5, node.coord, name=node.op, ltype=ltype
         )
 
+    def visit_Constant(self, node):
+        node.uc_type = self.typemap[node.type]
+    
+    def visit_ID(self, node):
+        node.uc_type = ...
+
+    # def visit_GlobalDecl(self, nodes):
+    #     for node in nodes:
+    #         self.visit(node)
+    # def visit_Decl(self, node):
+    #     self.
+    #     node.uc_type
+    #     if node. is in 
 
 if __name__ == "__main__":
     # create argument parser
