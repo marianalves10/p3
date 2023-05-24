@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 from uc.uc_ast import ID
 from uc.uc_parser import UCParser
-from uc.uc_type import CharType, IntType, BoolType
+from uc.uc_type import CharType, IntType, BoolType, VoidType
 
 
 class SymbolTable:
@@ -21,6 +21,7 @@ class SymbolTable:
     def __init__(self) -> None:
         """ Initializes the SymbolTable. """
         self.__data = dict()
+        self.function_scope = False
 
     @property
     def data(self) -> Dict[str, Any]:
@@ -36,7 +37,8 @@ class SymbolTable:
         - :param value: the value to assign to the given `name`
         """
         self.__data[name] = value
-    def exit_scope(self, name):
+
+    def destroy_scope(self, name):
         self.__data.pop(name)
 
     def is_in_scope(self, value: Any):
@@ -99,9 +101,11 @@ class Visitor(NodeVisitor):
         self.typemap = {
             "int": IntType,
             "char": CharType,
-            "bool" : BoolType
+            "bool" : BoolType,
+            "void" : VoidType
             # TODO
         }
+        self.return_type = None
         # TODO: Complete...
 
     def _assert_semantic(self, condition: bool, msg_code: int, coord, name: str = "", ltype="", rtype=""):
@@ -150,7 +154,8 @@ class Visitor(NodeVisitor):
         ltype = node.lvalue.uc_type
         self.visit(node.rvalue)
         rtype = node.rvalue.uc_type
-
+        print(ltype)
+        print(rtype, 'right')
         self._assert_semantic(rtype == ltype, 4,  ltype, rtype)
         self._assert_semantic(node.op in ltype.binary_ops or node.op in ltype.rel_ops, 6, node.op, ltype)
         # TODO:
@@ -163,7 +168,8 @@ class Visitor(NodeVisitor):
             node.uc_type = self.typemap[ltype.typename]
             
     def visit_UnaryOp(self, node):
-        self._assert_semantic(node.op in node.unary_ops, 25, node.op)
+        self.visit(node.expr)
+        self._assert_semantic(node.op in node.expr.uc_type.unary_ops, 25, node.coord, node.op)
         self.visit(node.expr)
         expr_type = node.expr.uc_type
         node.uc_type = expr_type
@@ -182,22 +188,35 @@ class Visitor(NodeVisitor):
                                   1, node.coord, name=_var.name)
         ltype = node.lvalue.uc_type
         # Check that assignment is allowed
+        print("lolo", rtype)
+        
         self._assert_semantic(ltype == rtype, 4, node.coord,
                               ltype=ltype, rtype=rtype)
         # Check that assign_ops is supported by the type
         self._assert_semantic(
             node.op in ltype.assign_ops, 5, node.coord, name=node.op, ltype=ltype
         )
+    def visit_FuncDef(self, node):
+        self.visit(node.decl)
+        print(node.decl.name)
+        self.return_type = node.decl.name
+        self.symtab.function_scope = True
+        self.visit(node.body)
+        self._assert_semantic(self.return_type == VoidType, 23, node.body.coord, ltype=f'type({VoidType.typename})', rtype=f'type({self.return_type})')
+        self.symtab.function_scope = False
+        self.symtab.destroy_scope(0)
+        self.return_type = None
+#   def visit_Return(self,node):
 
     def visit_Constant(self, node):
         node.uc_type = self.typemap[node.type]
     
     def visit_ID(self, node):
+        self.symtab.lookup(node.name)
         node.uc_type = ...
 
-    # def visit_GlobalDecl(self, nodes):
-    #     for node in nodes:
-    #         self.visit(node)
+    # def visit_GlobalDecl(self, node):
+    # self.visit(node)
     # def visit_Decl(self, node):
     #     self.
     #     node.uc_type

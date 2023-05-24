@@ -41,7 +41,8 @@ BoolType = uCType("bool",
                   assign_ops={"="},
 )
 
-
+VoidType =  uCType("void"
+)
 
 # TODO: add array and function types
 # Array and Function types need to be instantiated for each declaration
@@ -50,8 +51,14 @@ class ArrayType(uCType):
         """
         type: Any of the uCTypes can be used as the array's type. This
               means that there's support for nested types, like matrices.
-        size: Integer with the length of the array.
+        size: Integer withas_returnh the length of the array.
         """
         self.type = element_type
         self.size = size
         super().__init__(None, rel_ops={"==", "!="})
+
+class FunctionType(uCType):
+    def __init__(self, name, binary_ops=set(), unary_ops=set(), rel_ops=set(), assign_ops=set(), return_type = None, param = []):
+        self.return_type = return_type
+        self.parameters = param
+        super().__init__(name, binary_ops, unary_ops, rel_ops, assign_ops)
