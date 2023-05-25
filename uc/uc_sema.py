@@ -5,7 +5,7 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 from uc.uc_ast import ID
 from uc.uc_parser import UCParser
-from uc.uc_type import CharType, IntType, BoolType, VoidType
+from uc.uc_type import CharType, IntType, BoolType, VoidType, StringType
 
 
 class SymbolTable:
@@ -102,7 +102,8 @@ class Visitor(NodeVisitor):
             "int": IntType,
             "char": CharType,
             "bool" : BoolType,
-            "void" : VoidType
+            "void" : VoidType,
+            "string" : StringType
             # TODO
         }
         self.return_type = None
@@ -148,14 +149,14 @@ class Visitor(NodeVisitor):
             self.visit(_decl)
         # TODO: Manage the symbol table
 
+    def visit_Constant(self, node):
+        pass
     def visit_BinaryOp(self, node):
         # Visit the left and right expression
         self.visit(node.lvalue)
         ltype = node.lvalue.uc_type
         self.visit(node.rvalue)
         rtype = node.rvalue.uc_type
-        print(ltype)
-        print(rtype, 'right')
         self._assert_semantic(rtype == ltype, 4,  ltype, rtype)
         self._assert_semantic(node.op in ltype.binary_ops or node.op in ltype.rel_ops, 6, node.op, ltype)
         # TODO:
@@ -183,12 +184,12 @@ class Visitor(NodeVisitor):
         # visit left side (must be a location)
         _var = node.lvalue
         self.visit(_var)
+
         if isinstance(_var, ID):
             self._assert_semantic(_var.scope is not None,
                                   1, node.coord, name=_var.name)
         ltype = node.lvalue.uc_type
         # Check that assignment is allowed
-        print("lolo", rtype)
         
         self._assert_semantic(ltype == rtype, 4, node.coord,
                               ltype=ltype, rtype=rtype)
@@ -198,7 +199,8 @@ class Visitor(NodeVisitor):
         )
     def visit_FuncDef(self, node):
         self.visit(node.decl)
-        print(node.decl.name)
+        self.visit(node.body)
+        #print(node.decl.name)
         self.return_type = node.decl.name
         self.symtab.function_scope = True
         self.visit(node.body)
@@ -212,15 +214,26 @@ class Visitor(NodeVisitor):
         node.uc_type = self.typemap[node.type]
     
     def visit_ID(self, node):
-        self.symtab.lookup(node.name)
-        node.uc_type = ...
+        is_declared = self.symtab.lookup(node.name)
+        self._assert_semantic(is_declared is not None, 1, node.coord, node.name)
+        node.uc_type = is_declared.uc_type
 
-    # def visit_GlobalDecl(self, node):
-    # self.visit(node)
+    def visit_VarDecl(self, node):
+        pass
+
+    def visit_Decl(self, node):
+
+        #self.visit(node.)
+        self.symtab.add(node.name.name, node.init)
+    def visit_GlobalDecl(self, nodes):
+        for gdcl in nodes.decls:
+            self.visit(gdcl)
     # def visit_Decl(self, node):
     #     self.
     #     node.uc_type
     #     if node. is in 
+    def visit_FuncDecl(self, nodes):
+        print('ta aqui')
 
 if __name__ == "__main__":
     # create argument parser

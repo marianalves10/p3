@@ -43,6 +43,10 @@ BoolType = uCType("bool",
 
 VoidType =  uCType("void"
 )
+StringType = uCType("string",
+                    rel_ops={"!=","=="},
+                    assign_ops={"="}
+)
 
 # TODO: add array and function types
 # Array and Function types need to be instantiated for each declaration
