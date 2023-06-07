@@ -5,13 +5,13 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 from uc.uc_ast import ID
 from uc.uc_parser import UCParser
-from uc.uc_type import CharType, IntType
+from uc.uc_type import CharType, IntType, VoidType, BoolType
 
 
 class SymbolTable:
     """Class representing a symbol table.
 
-    `add` and `lookup` methods are given, however you still need to find a way to 
+    `add` and `lookup` methods are given, however you still need to find a way to
     deal with scopes.
 
     ## Attributes
@@ -20,14 +20,12 @@ class SymbolTable:
 
     def __init__(self) -> None:
         """ Initializes the SymbolTable. """
-        self.__data = dict()
+        self.scope = []
 
-    @property
-    def data(self) -> Dict[str, Any]:
-        """ Returns a copy of the SymbolTable.
-        """
-        return deepcopy(self.__data)
-
+    def create_scope(self):
+        self.scope.insert(0, {})
+    def destroy_scope(self):
+        self.scope.pop(0)
     def add(self, name: str, value: Any) -> None:
         """ Adds to the SymbolTable.
 
@@ -35,19 +33,14 @@ class SymbolTable:
         - :param name: the identifier on the SymbolTable
         - :param value: the value to assign to the given `name`
         """
-        self.__data[name] = value
+        self.scope[0][name] = value
 
     def lookup(self, name: str) -> Union[Any, None]:
-        """ Searches `name` on the SymbolTable and returns the value
-        assigned to it.
-
-        ## Parameters
-        - :param name: the identifier that will be searched on the SymbolTable
-
-        ## Return
-        - :return: the value assigned to `name` on the SymbolTable. If `name` is not found, `None` is returned.
-        """
-        return self.__data.get(name)
+        for scope in self.scope:
+            res = scope.get(name)
+            if res:
+                return res
+        return None
 
 
 class NodeVisitor:
@@ -93,7 +86,8 @@ class Visitor(NodeVisitor):
         self.typemap = {
             "int": IntType,
             "char": CharType,
-            # TODO
+            "void": VoidType,
+            "bool": BoolType
         }
         # TODO: Complete...
 
@@ -133,23 +127,45 @@ class Visitor(NodeVisitor):
 
     def visit_Program(self, node):
         # Visit all of the global declarations
+        print("inicio programa")
+        self.symtab.create_scope()
         for _decl in node.gdecls:
             self.visit(_decl)
+        self.symtab.destroy_scope()
         # TODO: Manage the symbol table
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expression
-        self.visit(node.left)
-        ltype = node.left.uc_type
-        self.visit(node.right)
-        rtype = node.right.uc_type
+        print("binaryop")
+        self.visit(node.lvalue)
+        ltype = node.lvalue.uc_type
+        self.visit(node.rvalue)
+        rtype = node.rvalue.uc_type
+        self._assert_semantic(rtype == ltype, 4,  ltype, rtype)
+        self._assert_semantic(node.op in ltype.binary_ops.union(ltype.rel_ops), 6, node.op, ltype)
         # TODO:
         # - Make sure left and right operands have the same type
         # - Make sure the operation is supported
         # - Assign the result type
-
+        if node.op in ltype.rel_ops:
+            node.uc_type = self.typemap["bool"]
+        else:
+            node.uc_type = ltype
+    def visit_UnaryOp(self, node):
+        print("unaryop")
+        self.visit(node.expr)
+        self._assert_semantic(node.op in node.expr.uc_type.unary_ops, 25, node.coord, node.op)
+        node.uc_type = node.expr.uc_type
+    def visit_DeclList(self, node):
+        print("decllist")
+        for decl in (node.decls or []):
+            self.visit(decl)
+    def visit_VarDecl(self, node):
+        print("var decl")
+        node.uc_type = self.visit(node.type)
     def visit_Assignment(self, node):
         # visit right side
+        print("assigment")
         self.visit(node.rvalue)
         rtype = node.rvalue.uc_type
         # visit left side (must be a location)
@@ -167,6 +183,61 @@ class Visitor(NodeVisitor):
             node.op in ltype.assign_ops, 5, node.coord, name=node.op, ltype=ltype
         )
 
+    def visit_Constant(self, node):
+        print("constant")
+        node.uc_type = self.typemap[node.type]
+        if node.type == "int":
+            node.value = int(node.value)
+        print(type(node.value))
+
+    def visit_Type(self, node):
+        print("type")
+        node.uc_type = self.typemap[node.name]
+
+    def visit_ID(self, node):
+        print("ID")
+        value_node = self.symtab.lookup(node.name)
+        self._assert_semantic(value_node is not None, 1, node.name)
+        node.name.uc_type = value_node
+
+    def visit_Assert(self, node):
+        print("assert")
+        self.visit(node.expr)
+        node.uc_type = node.expr.uc_type
+        self._assert_semantic(node.uc_type == BoolType, 3)
+
+    def visit_Compound(self, node):
+        #VAI QUE É VAZIO
+        print("compound")
+        if node.citens:
+            for i in node.citens:
+                self.visit(i)
+
+    def visit_If(self, node):
+        print("if")
+        self.visit(node.cond)
+        self._assert_semantic(node.cond.uc_type == BoolType, 18)
+        self.visit(node.iftrue)
+
+        if node.iffalse:
+            self.visit(node.iffalse)
+
+    def visit_Decl(self, node):
+        print("decl")
+
+        self._assert_semantic(self.symtab.lookup(node.name) is None,
+                              24, node.name.coord, name=node.name.name)
+
+        self.symtab.add(node.name, node.type)
+
+        self.visit(node.type)
+
+        if node.init:
+            self.visit(node.init)
+    # vardecl: fazer um add na symtab,
+    # definicao de funcao, precis ccriar um scope novo, fazer uma pilha de symtab.
+    # quando define uma funcao, guarda o tipo do return (quando usar o return, tem que ver se o tipo ta correto)
+    #  para o break, guardar que to dentro de uma funcao
 
 if __name__ == "__main__":
     # create argument parser
