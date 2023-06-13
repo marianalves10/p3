@@ -549,6 +549,7 @@ class FuncDef(Node):
         :param body: function compound body.
         :param coord: code position.
         """
+
         self.type = type
         self.decl = decl
         self.body = body
@@ -649,6 +650,7 @@ class InitList(Node):
         """
         self.exprs = exprs
         self.coord = coord
+        self.uc_type = None
 
     def children(self):
         nodelist = []

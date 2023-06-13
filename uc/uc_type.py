@@ -56,7 +56,7 @@ class ArrayType(uCType):
         super().__init__(None, rel_ops={"==", "!="})
 
 class FunctionType(uCType):
-    def __init__(self, name, binary_ops=set(), unary_ops=set(), rel_ops=set(), assign_ops=set(), return_type = None, param = []):
+    def __init__(self, binary_ops=set(), unary_ops=set(), rel_ops=set(), assign_ops=set(), return_type = None, param = []):
         self.return_type = return_type
         self.parameters = param
-        super().__init__(name, binary_ops, unary_ops, rel_ops, assign_ops)
+        super().__init__(None, binary_ops, unary_ops, rel_ops, assign_ops)

@@ -90,7 +90,7 @@ class Visitor(NodeVisitor):
             "void": VoidType,
             "bool": BoolType
         }
-        # TODO: Complete...
+        self.has_return = False
 
     def _assert_semantic(self, condition: bool, msg_code: int, coord, name: str = "", ltype="", rtype=""):
         """Check condition, if false print selected error message and exit"""
@@ -143,7 +143,7 @@ class Visitor(NodeVisitor):
         self.visit(node.rvalue)
         rtype = node.rvalue.uc_type
         self._assert_semantic(rtype == ltype, 4,  ltype, rtype)
-        self._assert_semantic(node.op in ltype.binary_ops.union(ltype.rel_ops), 6, node.coord, node.op, f"({ltype.typename})")
+        self._assert_semantic(node.op in ltype.binary_ops.union(ltype.rel_ops), 6, node.coord, node.op, f"type({ltype.typename})")
         # TODO:
         # - Make sure left and right operands have the same type
         # - Make sure the operation is supported
@@ -216,11 +216,17 @@ class Visitor(NodeVisitor):
     def visit_If(self, node):
         print("if")
         self.visit(node.cond)
-        self._assert_semantic(node.cond.uc_type == BoolType, 18)
+        self._assert_semantic(node.cond.uc_type == BoolType, 18, node.coord)
         self.visit(node.iftrue)
 
         if node.iffalse:
             self.visit(node.iffalse)
+
+    def check_type(self, type):
+        if type in [IntType, BoolType, CharType]:
+            return True
+        else:
+            return False
 
     def visit_Decl(self, node):
         print("decl")
@@ -235,24 +241,30 @@ class Visitor(NodeVisitor):
         node.uc_type = node.type.type.uc_type
         if node.init:
             self.visit(node.init)
-            node.init.uc_type = node.type.type.uc_type
             if not node.uc_type == ArrayType:
-                if node.init.uc_type != None:
-
-                    self._assert_semantic(node.init.uc_type.typename == "char" or node.init.uc_type.typename == "bool" or node.init.uc_type.typename == "intr", 11, node.name.coord, name=node.name.name)
+                self._assert_semantic(self.check_type(node.init.uc_type), 11, node.name.coord, name=node.name.name)
 
 
     def visit_FuncDef(self, node):
         print("funcdef")
+        #print("node type", node.type)
+        self.visit(node.type)
         self.visit(node.decl)
-#         print(node.body)
-#         print("node.decl.name",node.decl.name)
-#         self.symtab.add(node.decl.name, node.type)
+        #print()
+        #print("node.type.type.params",node.type.type.params)
+        if node.type.type.params is not None:
+            params_type = [decl.uc_type for decl in node.type.type.params.params]
+        else:
+            params_type = []
+        #print("lista", params_type)
+        self.symtab.add(node.type.name, FunctionType(return_type=node.decl.uc_type, param= params_type))
 
+        #self.symtab.add(node.type.type.params.params[0].name.name,IntType)
+        self.has_return = False
         self.return_type = node.decl.name
         self.symtab.function_scope = True
         self.visit(node.body)
-        self._assert_semantic(self.return_type == "void", 23, node.body.coord, ltype=f'type({VoidType.typename})', rtype=f'type({self.return_type})')
+        self._assert_semantic(self.return_type == "void" or self.has_return, 23, node.body.coord, ltype=f'type({VoidType.typename})', rtype=f'type({self.return_type})')
         self.symtab.function_scope = False
         self.symtab.destroy_scope()
         self.return_type = None
@@ -260,7 +272,12 @@ class Visitor(NodeVisitor):
     # definicao de funcao, precis ccriar um scope novo, fazer uma pilha de symtab.
     # quando define uma funcao, guarda o tipo do return (quando usar o return, tem que ver se o tipo ta correto)
     #  para o break, guardar que to dentro de uma funcao
+
+    def visit_Return(self, node):
+        self.has_return = True
+
     def visit_FuncDecl(self, node):
+        print("funcdecl")
         self.symtab.create_scope()
 
         self.visit(node.type)
@@ -270,7 +287,7 @@ class Visitor(NodeVisitor):
         else:
             params = []
 
-        node.uc_type = FunctionType(node.type.uc_type, param_list)
+        node.uc_type = FunctionType(node.type.uc_type, params)
 if __name__ == "__main__":
     # create argument parser
     parser = argparse.ArgumentParser()
