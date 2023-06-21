@@ -236,6 +236,7 @@ class ArrayDecl(DeclType):
         """
         self.type = type
         self.dim = dim
+        self.uc_type = None
         self.coord = coord
 
     def children(self):
@@ -259,6 +260,7 @@ class ArrayRef(Node):
         """
         self.name = name
         self.subscript = subscript
+        self.uc_type = None
         self.coord = coord
     def children(self):
         nodelist = []
@@ -380,10 +382,14 @@ class Constant(Node):
         """
         self.type = type
         self.value = value
+        self.uc_type = None
         self.coord = coord
 
     def children(self):
         return ()
+    def __str__(self):
+        return f"Constant(rawtype={self.type},\n         value={self.value},\n         uc_type=)"
+
 
 
 class Decl(DeclType):
@@ -691,6 +697,7 @@ class Print(Node):
         :param coord: code position.
         """
         self.expr = expr
+        self.uc_type = None
         self.coord = coord
 
     def children(self):
@@ -729,6 +736,7 @@ class Read(Node):
         :param coord: code position.
         """
         self.names = names
+        self.uc_type = None
         self.coord = coord
 
     def children(self):

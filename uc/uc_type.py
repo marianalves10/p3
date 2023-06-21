@@ -60,9 +60,12 @@ class ArrayType(uCType):
         self.type = element_type
         self.size = size
         super().__init__(None, rel_ops={"==", "!="})
-
+        self.typename = "array"
 class FunctionType(uCType):
     def __init__(self, binary_ops=set(), unary_ops=set(), rel_ops=set(), assign_ops=set(), return_type = None, param = []):
         self.return_type = return_type
         self.parameters = param
+
         super().__init__(None, binary_ops, unary_ops, rel_ops, assign_ops)
+    def __str__(self):
+        return f"{self.return_type}, {self.parameters}"
