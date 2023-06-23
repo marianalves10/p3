@@ -258,11 +258,6 @@ class Visitor(NodeVisitor):
         if node.iffalse:
             self.visit(node.iffalse)
 
-    def check_type(self, type):
-        if type in [IntType, BoolType, CharType, StringType]:
-            return True
-        else:
-            return False
 
     def visit_Decl(self, node):
         self.print("decl")
@@ -292,7 +287,7 @@ class Visitor(NodeVisitor):
                 elif node.init.uc_type == StringType:
                     self._assert_semantic(len(node.init.value) == node.uc_type.size, 9, node.name.coord, node.name.name)
             else:
-                self._assert_semantic(self.check_type(node.init.uc_type), 11, node.name.coord, name=node.name.name)
+                self._assert_semantic(node.init.uc_type in [IntType, BoolType, CharType, StringType], 11, node.name.coord, name=node.name.name)
                 self._assert_semantic(node.uc_type == node.init.uc_type, 10, node.name.coord, name=node.name.name)
 
 
@@ -402,9 +397,9 @@ class Visitor(NodeVisitor):
             self.visit(node.expr)
             # ERROR 36-> O NODE.EXPR NAO TEM UC_TYPE
             if isinstance(node.expr.uc_type, ArrayType):
-                self._assert_semantic(self.check_type(node.expr.uc_type), 21, node.expr.coord, name=node.expr.name)
+                self._assert_semantic(node.expr.uc_type in [IntType, BoolType, CharType, StringType], 21, node.expr.coord, name=node.expr.name)
             else:
-                self._assert_semantic(self.check_type(node.expr.uc_type), 20, node.expr.coord)
+                self._assert_semantic(node.expr.uc_type in [IntType, BoolType, CharType, StringType], 20, node.expr.coord)
 
     def visit_InitList(self, node):
         self.print("initlist")
