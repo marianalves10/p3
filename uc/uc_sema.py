@@ -285,19 +285,19 @@ class Visitor(NodeVisitor):
             node.uc_type = node.type.type.uc_type
         if node.init:
             self.visit(node.init)
-            if not node.uc_type.typename == "array":
-                self._assert_semantic(self.check_type(node.init.uc_type), 11, node.name.coord, name=node.name.name)
-                self._assert_semantic(node.uc_type == node.init.uc_type, 10, node.name.coord, name=node.name.name)
-            else:
+            if node.uc_type.typename == "array":
                 self._assert_semantic(node.uc_type.size, 8, node.name.coord)
                 if isinstance(node.init, InitList):
                     self._assert_semantic(node.uc_type.size == node.init, 13, node.name.coord)
                 elif node.init.uc_type == StringType:
                     self._assert_semantic(len(node.init.value) == node.uc_type.size, 9, node.name.coord, node.name.name)
+            else:
+                self._assert_semantic(self.check_type(node.init.uc_type), 11, node.name.coord, name=node.name.name)
+                self._assert_semantic(node.uc_type == node.init.uc_type, 10, node.name.coord, name=node.name.name)
+
 
     def visit_FuncDef(self, node):
         self.print("funcdef")
-        # print("node type", node.type)
         self.visit(node.type)
         self.visit(node.decl)
         self.is_in_function = True
@@ -305,7 +305,6 @@ class Visitor(NodeVisitor):
             params_type = [decl.uc_type for decl in node.type.type.params.params]
         else:
             params_type = []
-        # print("return type",node.decl.uc_type.typename )
         self.has_return = False
         self.return_type = node.decl.name
         self.symtab.function_scope = True
