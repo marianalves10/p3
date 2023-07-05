@@ -260,7 +260,9 @@ class ArrayRef(Node):
         """
         self.name = name
         self.subscript = subscript
+
         self.uc_type = None
+
         self.coord = coord
     def children(self):
         nodelist = []
@@ -656,7 +658,9 @@ class InitList(Node):
         """
         self.exprs = exprs
         self.coord = coord
+
         self.uc_type = None
+
 
     def children(self):
         nodelist = []
@@ -698,6 +702,7 @@ class Print(Node):
         """
         self.expr = expr
         self.uc_type = None
+
         self.coord = coord
 
     def children(self):
@@ -737,6 +742,7 @@ class Read(Node):
         """
         self.names = names
         self.uc_type = None
+
         self.coord = coord
 
     def children(self):

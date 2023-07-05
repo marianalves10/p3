@@ -5,7 +5,9 @@ from copy import deepcopy
 from typing import Any, Dict, Union
 from uc.uc_ast import ID, ExprList, ArrayRef, Constant, InitList, VarDecl, ArrayDecl
 from uc.uc_parser import UCParser
+
 from uc.uc_type import CharType, IntType, VoidType, BoolType, ArrayType, FunctionType, StringType
+
 
 
 class SymbolTable:
@@ -20,7 +22,9 @@ class SymbolTable:
 
     def __init__(self) -> None:
         """ Initializes the SymbolTable. """
+
         self.scope = []
+
 
     def create_scope(self):
         self.scope.insert(0, {})
@@ -38,6 +42,13 @@ class SymbolTable:
         """
         self.scope[0][name] = value
 
+    
+
+    def is_in_scope(self, value: Any):
+        if value in self.__data:
+            return True
+        else:
+            return False
     def lookup(self, name: str) -> Union[Any, None]:
         for scope in self.scope:
             res = scope.get(name)
@@ -53,6 +64,7 @@ class SymbolTable:
             if scope.get(name):
                 return 0  # ja achou e nao é o escopo atual
         return -1  # nao achou
+
 
 
 class NodeVisitor:
@@ -111,6 +123,7 @@ class Visitor(NodeVisitor):
         if self.debug:
             print(text)
 
+
     def _assert_semantic(self, condition: bool, msg_code: int, coord, name: str = "", ltype="", rtype=""):
         """Check condition, if false print selected error message and exit"""
         error_msgs = {
@@ -154,19 +167,25 @@ class Visitor(NodeVisitor):
         self.symtab.destroy_scope()
         # TODO: Manage the symbol table
 
+    def visit_Constant(self, node):
+        pass
     def visit_BinaryOp(self, node):
         # Visit the left and right expression
+
         self.print("binaryop")
+
         self.visit(node.lvalue)
         ltype = node.lvalue.uc_type
         self.visit(node.rvalue)
         rtype = node.rvalue.uc_type
+
 
         ltype_bin_op = ltype.binary_ops
         self._assert_semantic(rtype == ltype, 5, node.coord, node.op)
 
         self._assert_semantic(node.op in ltype_bin_op.union(ltype.rel_ops), 6, node.coord, node.op,
                               f"type({ltype.typename})")
+
 
         # TODO:
         # - Make sure left and right operands have the same type
@@ -193,6 +212,9 @@ class Visitor(NodeVisitor):
         self.visit(node.type)
         node.uc_type = node.type.uc_type
 
+
+    # def visit_FuncDecl(self,node):
+    #     self.visit(node.)
     def visit_Assignment(self, node):
         # visit right side
         self.print("assigment")
@@ -201,6 +223,7 @@ class Visitor(NodeVisitor):
         # visit left side (must be a location)
         _var = node.lvalue
         self.visit(_var)
+
         #         if isinstance(_var, ID):
         #             self._assert_semantic(_var.scope is not None,
         #                                   1, node.coord, name=_var.name)
@@ -213,6 +236,18 @@ class Visitor(NodeVisitor):
         self._assert_semantic(
             node.op in ltype.assign_ops, 5, node.coord, name=node.op, ltype=ltype
         )
+    def visit_FuncDef(self, node):
+        self.visit(node.decl)
+        self.visit(node.body)
+        #print(node.decl.name)
+        self.return_type = node.decl.name
+        self.symtab.function_scope = True
+        self.visit(node.body)
+        self._assert_semantic(self.return_type == VoidType, 23, node.body.coord, ltype=f'type({VoidType.typename})', rtype=f'type({self.return_type})')
+        self.symtab.function_scope = False
+        self.symtab.destroy_scope(0)
+        self.return_type = None
+#   def visit_Return(self,node):
 
     def visit_Constant(self, node):
         self.print("constant")

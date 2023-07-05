@@ -26,7 +26,7 @@ IntType = uCType(
     rel_ops={"==", "!=", "<", ">", "<=", ">="},
     assign_ops={"="},
 )
-# TODO: add other basic types
+
 CharType = uCType("char",
                   rel_ops={"==", "!=", "&&", "||"},
                   assign_ops={"="},
@@ -46,6 +46,7 @@ StringType = uCType(
     "string",
     rel_ops={"==", "!="},
     assign_ops={"="}
+
 )
 
 # TODO: add array and function types
@@ -60,6 +61,7 @@ class ArrayType(uCType):
         self.type = element_type
         self.size = size
         super().__init__(None, rel_ops={"==", "!="})
+
         self.typename = "array"
 class FunctionType(uCType):
     def __init__(self, binary_ops=set(), unary_ops=set(), rel_ops=set(), assign_ops=set(), return_type = None, param = []):
